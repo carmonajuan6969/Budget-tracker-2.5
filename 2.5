@@ -1,0 +1,1111 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Budget Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:ital,opsz,wght@0,9..144,300;1,9..144,300&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f4f5f0;--surface:#ffffff;--surface2:#eef0e8;--border:#d8dbd0;
+  --text:#1a1c14;--muted:#6b7060;--accent:#5a7a0a;--accent2:#1a8a6a;
+  --danger:#c0392b;--warn:#b8860b;--good:#1a7a3a;--purple:#6a3ab0;
+}
+body{font-family:'DM Mono',monospace;background:var(--bg);color:var(--text);min-height:100vh}
+.app{max-width:860px;margin:0 auto;padding:24px 14px 80px}
+
+/* ── HEADER ── */
+header{margin-bottom:24px;border-bottom:1px solid var(–border);padding-bottom:18px}
+h1{font-family:‘Fraunces’,serif;font-size:clamp(1.5rem,5vw,2.2rem);font-weight:300;color:var(–accent)}
+.subtitle{font-size:0.7rem;color:var(–muted);margin-top:3px;font-style:italic}
+.month-badge{font-size:0.68rem;background:var(–surface2);border:1px solid var(–border);color:var(–muted);padding:3px 9px;border-radius:2px;letter-spacing:.1em;text-transform:uppercase}
+.header-top{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px}
+.income-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+.chip{background:var(–surface2);border:1px solid var(–border);border-radius:3px;padding:7px 12px;font-size:0.73rem;cursor:pointer;position:relative}
+.chip:hover{border-color:var(–accent)}
+.chip .clabel{color:var(–muted);display:block;font-size:0.62rem;margin-bottom:2px;letter-spacing:.08em;text-transform:uppercase}
+.chip strong{color:var(–accent);font-size:0.9rem}
+.chip .edit-hint{font-size:0.58rem;color:var(–muted);opacity:0.6;display:block;margin-top:1px}
+
+/* ── NEXT PAY ── */
+.next-pay{background:var(–surface2);border:1px solid var(–border);border-left:3px solid var(–accent);border-radius:3px;padding:9px 13px;margin-bottom:18px;font-size:0.73rem}
+.np-label{color:var(–muted);font-size:0.63rem;text-transform:uppercase;letter-spacing:.08em;display:block;margin-bottom:2px}
+
+/* ── OVERVIEW ── */
+.overview{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:10px;margin-bottom:24px}
+.ov-card{background:var(–surface);border:1px solid var(–border);border-radius:4px;padding:13px 14px;position:relative;overflow:hidden}
+.ov-card::after{content:’’;position:absolute;bottom:0;left:0;height:3px;width:var(–pct,0%);background:var(–bar-color,var(–accent));transition:width .6s cubic-bezier(.23,1,.32,1)}
+.ov-label{font-size:0.62rem;color:var(–muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:5px}
+.ov-amount{font-size:1.2rem;font-weight:500}
+.ov-sub{font-size:0.67rem;color:var(–muted);margin-top:2px}
+.ov-pct{font-size:0.67rem;position:absolute;top:13px;right:13px}
+
+/* ── TABS ── */
+.tabs{display:flex;border-bottom:1px solid var(–border);margin-bottom:20px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.tab{padding:9px 16px;font-family:‘DM Mono’,monospace;font-size:0.7rem;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;border:none;background:none;color:var(–muted);border-bottom:2px solid transparent;margin-bottom:-1px;transition:color .2s,border-color .2s;white-space:nowrap;-webkit-tap-highlight-color:transparent}
+.tab:hover,.tab:active{color:var(–text)}
+.tab.active{color:var(–accent);border-bottom-color:var(–accent)}
+.panel{display:none}.panel.active{display:block}
+
+/* ── CARDS ── */
+.card{background:var(–surface);border:1px solid var(–border);border-radius:4px;overflow:hidden;margin-bottom:10px}
+.card-header{display:flex;align-items:center;justify-content:space-between;padding:11px 15px;cursor:pointer;-webkit-tap-highlight-color:transparent;user-select:none}
+.card-title{font-size:0.78rem;font-weight:500;letter-spacing:.05em}
+.card-body{padding:0 15px 13px;border-top:1px solid var(–border)}
+.summary-card{background:var(–surface);border:1px solid var(–border);border-radius:4px;padding:15px;margin-bottom:10px}
+
+/* ── PROGRESS BAR ── */
+.prog-wrap{height:6px;background:var(–surface2);border-radius:3px;overflow:hidden;margin:8px 0 5px}
+.prog-bar{height:100%;border-radius:3px;transition:width .5s ease}
+
+/* ── BILLS ── */
+.bill-row{display:flex;align-items:center;gap:9px;padding:8px 0;border-bottom:1px solid var(–border);font-size:0.73rem}
+.bill-row:last-child{border-bottom:none}
+.bill-row.paid{opacity:.38}
+.bill-row.paid .bill-name{text-decoration:line-through;color:var(–muted)}
+.check-box{width:21px;height:21px;border-radius:4px;border:1.5px solid var(–border);background:var(–surface2);cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:background .15s,border-color .15s;-webkit-tap-highlight-color:transparent;user-select:none}
+.check-box.on{background:var(–good);border-color:var(–good)}
+.check-box.on::after{content:‘✓’;font-size:0.7rem;color:#ffffff;font-weight:800}
+.bill-name{flex:1}
+.bill-amt{color:var(–muted);padding-left:6px;cursor:pointer;border-bottom:1px dashed transparent;transition:border-color .2s}
+.bill-amt:hover{border-color:var(–muted)}
+.paid-tag{font-size:0.58rem;color:var(–good);background:rgba(106,224,148,.1);padding:1px 5px;border-radius:2px;letter-spacing:.05em}
+.bill-del{background:none;border:none;color:transparent;cursor:pointer;font-size:0.75rem;padding:2px 5px;transition:color .2s}
+.bill-row:hover .bill-del{color:var(–muted)}
+.bill-del:hover{color:var(–danger) !important}
+
+/* ── EXPENSE ITEMS ── */
+.exp-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(–border);font-size:0.73rem}
+.exp-row:last-child{border-bottom:none}
+.exp-name{flex:1;cursor:pointer;border-bottom:1px dashed transparent;transition:border-color .2s}
+.exp-name:hover{border-color:var(–muted)}
+
+/* ── INPUTS ── */
+.inp{background:var(–surface2);border:1px solid var(–border);color:var(–text);font-family:‘DM Mono’,monospace;font-size:0.73rem;padding:7px 10px;border-radius:3px;outline:none;transition:border-color .2s;-webkit-appearance:none}
+.inp:focus{border-color:var(–accent)}
+.inp::placeholder{color:var(–muted)}
+.inp.sm{padding:5px 8px;font-size:0.68rem}
+.add-row{display:flex;gap:7px;margin-top:10px;flex-wrap:wrap}
+.add-row .inp{flex:1;min-width:90px}
+
+/* ── INLINE EDIT ── */
+.editable{cursor:pointer;border-bottom:1px dashed rgba(200,224,106,.35);transition:border-color .2s;display:inline-block}
+.editable:hover{border-color:var(–accent)}
+.inline-inp{background:var(–surface2);border:1px solid var(–accent);color:var(–text);font-family:‘DM Mono’,monospace;border-radius:3px;outline:none;padding:2px 7px}
+
+/* ── BUTTONS ── */
+.btn{background:var(–accent);color:var(–bg);border:none;cursor:pointer;font-family:‘DM Mono’,monospace;font-size:0.7rem;font-weight:500;padding:7px 13px;border-radius:3px;letter-spacing:.05em;transition:opacity .2s;white-space:nowrap;-webkit-tap-highlight-color:transparent}
+.btn:hover,.btn:active{opacity:.82}
+.btn.sec{background:var(–surface2);color:var(–text);border:1px solid var(–border)}
+.btn.ghost{background:none;color:var(–accent2);border:1px solid rgba(106,224,180,.4)}
+.btn.ghost-red{background:none;color:var(–danger);border:1px solid rgba(224,106,106,.3)}
+.btn.sm{padding:5px 10px;font-size:0.67rem}
+
+/* ── SAVINGS ── */
+.save-card{background:var(–surface);border:1px solid var(–border);border-radius:4px;padding:15px;margin-bottom:10px}
+.save-title{font-size:0.65rem;color:var(–muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px}
+.save-bal{font-size:1.4rem;color:var(–accent2);font-weight:500;cursor:pointer;border-bottom:1px dashed rgba(106,224,180,.4);display:inline-block;transition:border-color .2s}
+.save-bal:hover{border-color:var(–accent2)}
+.dep-list{margin-top:9px;border-top:1px solid var(–border);padding-top:7px}
+.dep-row{display:flex;justify-content:space-between;align-items:center;font-size:0.7rem;padding:4px 0;color:var(–muted)}
+.dep-row:not(:last-child){border-bottom:1px solid var(–border)}
+
+/* ── INVEST POSITIONS ── */
+.pos-row{padding:10px 0;border-bottom:1px solid var(–border)}
+.pos-row:last-child{border-bottom:none}
+.pos-ticker{font-size:0.85rem;font-weight:500}
+.pos-meta{font-size:0.67rem;color:var(–muted);margin-top:3px}
+.alloc-bar{display:flex;height:8px;border-radius:4px;overflow:hidden;gap:1px;margin-top:8px}
+
+/* ── MISC ── */
+.ok{color:var(–good)}.warn-c{color:var(–warn)}.over{color:var(–danger)}
+.section-label{font-size:0.63rem;color:var(–muted);text-transform:uppercase;letter-spacing:.1em;margin:12px 0 7px}
+.bottom-row{margin-top:22px;display:flex;gap:9px;align-items:center;flex-wrap:wrap}
+.bottom-row span{font-size:0.68rem;color:var(–muted)}
+.empty-note{font-size:0.7rem;color:var(–muted);padding:8px 0}
+@media(max-width:480px){.tab{padding:8px 11px;font-size:0.65rem}h1{font-size:1.4rem}.ov-amount{font-size:1.1rem}}
+</style>
+
+</head>
+<body>
+<div class="app">
+
+<!-- HEADER -->
+
+<header>
+  <div class="header-top">
+    <div>
+      <h1>Budget Tracker</h1>
+      <div class="subtitle" id="subtitle">My Budget · 2026</div>
+    </div>
+    <div class="month-badge" id="currentMonth"></div>
+  </div>
+  <div class="income-row" id="incomeRow"></div>
+</header>
+
+<!-- NEXT PAY -->
+
+<div class="next-pay" id="nextPayBanner">
+  <span class="np-label">Next Paycheck</span>
+  <span id="nextPayDetail">—</span>
+</div>
+
+<!-- OVERVIEW -->
+
+<div class="overview" id="overview"></div>
+
+<!-- TABS -->
+
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('bills',this)">Bills</button>
+  <button class="tab" onclick="switchTab('play',this)">Play Money</button>
+  <button class="tab" onclick="switchTab('savings',this)">Savings</button>
+  <button class="tab" onclick="switchTab('investing',this)">Investing</button>
+  <button class="tab" onclick="switchTab('settings',this)">⚙ Settings</button>
+</div>
+
+<div id="panel-bills"     class="panel active"></div>
+<div id="panel-play"      class="panel"></div>
+<div id="panel-savings"   class="panel"></div>
+<div id="panel-investing" class="panel"></div>
+<div id="panel-settings"  class="panel"></div>
+
+<div class="bottom-row">
+  <button class="btn sec" onclick="resetMonth()">↺ Reset Month</button>
+  <span>Resets bills &amp; spending (balances kept)</span>
+</div>
+
+</div><!-- .app -->
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+//  STORAGE
+// ═══════════════════════════════════════════════════════════════
+function mkey(s){const d=new Date();return`bt_${d.getFullYear()}_${d.getMonth()}_${s}`;}
+function gkey(s){return`btg_${s}`;}
+function ld(k,fb){try{const v=localStorage.getItem(k);return v!==null?JSON.parse(v):fb;}catch{return fb;}}
+function sv(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch{}}
+
+// ═══════════════════════════════════════════════════════════════
+//  GLOBAL STATE  (persists across months)
+// ═══════════════════════════════════════════════════════════════
+let cfg = ld(gkey('cfg'), {
+  name: 'My Budget',
+  basePay: 2000,
+  commission: 1017,
+  playLimit: 600,
+  investTarget: 10   // percent
+});
+
+let bills = ld(gkey('bills'), [
+  {id:'b1',name:'Car',amount:474},
+  {id:'b2',name:'Insurance',amount:40},
+  {id:'b3',name:'Gas',amount:75},
+  {id:'b4',name:'Spotify',amount:13},
+  {id:'b5',name:'Gym',amount:60},
+  {id:'b6',name:'Xbox Live',amount:30},
+  {id:'b7',name:'Funded Account',amount:80},
+  {id:'b8',name:'Pre-workout',amount:50},
+  {id:'b9',name:'Haircut',amount:30}
+]);
+// [{id, name, amount}]
+
+let savAccounts = ld(gkey('savAccounts'), []);
+// [{id, name, apy, balance, goal}]
+
+let positions = ld(gkey('positions'), []);
+// [{id, ticker, broker, type, monthlyAmount, notes}]
+
+let payDates = ld(gkey('payDates'), [
+  {date:'2026-01-09',type:'base'},{date:'2026-01-23',type:'commission'},
+  {date:'2026-02-06',type:'base'},{date:'2026-02-20',type:'commission'},
+  {date:'2026-03-06',type:'base'},{date:'2026-03-20',type:'commission'},
+  {date:'2026-04-03',type:'base'},{date:'2026-04-17',type:'commission'},
+  {date:'2026-05-01',type:'base'},{date:'2026-05-15',type:'commission'},
+  {date:'2026-05-29',type:'base'},{date:'2026-06-12',type:'base'},
+  {date:'2026-06-26',type:'commission'},{date:'2026-07-10',type:'base'},
+  {date:'2026-07-24',type:'commission'},{date:'2026-08-07',type:'base'},
+  {date:'2026-08-21',type:'commission'},{date:'2026-09-04',type:'base'},
+  {date:'2026-09-18',type:'commission'},{date:'2026-10-02',type:'base'},
+  {date:'2026-10-16',type:'commission'},{date:'2026-10-30',type:'base'},
+  {date:'2026-11-13',type:'commission'},{date:'2026-11-27',type:'base'},
+  {date:'2026-12-11',type:'commission'},{date:'2026-12-24',type:'base'}
+]);
+// [{date:'YYYY-MM-DD', type:'base'|'commission'}]
+
+// ═══════════════════════════════════════════════════════════════
+//  MONTHLY STATE  (resets each month)
+// ═══════════════════════════════════════════════════════════════
+let billsPaid   = ld(mkey('billsPaid'), {});
+let playLog     = ld(mkey('playLog'), []);
+let savDeposits = ld(mkey('savDeposits'), {});
+
+function svCfg(){sv(gkey('cfg'),cfg);}
+function svBills(){sv(gkey('bills'),bills);}
+function svSavAccounts(){sv(gkey('savAccounts'),savAccounts);}
+function svPositions(){sv(gkey('positions'),positions);}
+function svPayDates(){sv(gkey('payDates'),payDates);}
+function svBillsPaid(){sv(mkey('billsPaid'),billsPaid);}
+function svPlayLog(){sv(mkey('playLog'),playLog);}
+function svSavDeposits(){sv(mkey('savDeposits'),savDeposits);}
+
+// ═══════════════════════════════════════════════════════════════
+//  HELPERS
+// ═══════════════════════════════════════════════════════════════
+const TOTAL = ()=> cfg.basePay + cfg.commission;
+function fmt(n){return'$'+Number(n||0).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0});}
+function fmtDate(iso){try{return new Date(iso).toLocaleDateString('en-US',{month:'short',day:'numeric'});}catch{return '';}}
+function uid(){return 'id_'+Date.now()+'_'+Math.random().toString(36).slice(2,6);}
+function barColor(p){return p>=100?'var(--danger)':p>=80?'var(--warn)':'var(--good)';}
+function sCls(p){return p>=100?'over':p>=80?'warn-c':'ok';}
+const POS_COLORS=['#a06ae0','#6a9ee0','#e06a9e','#e0c46a','#6ae0d4','#e09a6a','#9ae06a','#e06a6a'];
+function posCol(i){return POS_COLORS[i%POS_COLORS.length];}
+
+function getBillsTotal(){return bills.reduce((a,b)=>a+(b.amount||0),0);}
+function getBillsPaidAmt(){return bills.filter(b=>billsPaid[b.id]).reduce((a,b)=>a+(b.amount||0),0);}
+function getPlaySpent(){return playLog.reduce((a,i)=>a+(i.amount||0),0);}
+function getTotalInvesting(){return positions.reduce((a,p)=>a+(p.monthlyAmount||0),0);}
+function getSavDepTotal(){return savAccounts.reduce((a,s)=>{return a+(savDeposits[s.id]||[]).reduce((x,d)=>x+(d.amount||0),0);},0);}
+
+function nextPay(){
+  const t=new Date();t.setHours(0,0,0,0);
+  const sorted=[...payDates].sort((a,b)=>new Date(a.date)-new Date(b.date));
+  return sorted.find(p=>new Date(p.date)>=t)||null;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  INLINE EDIT HELPER  — replaces a span with an input on click
+// ═══════════════════════════════════════════════════════════════
+function makeEditable(el, getValue, onSave, opts={}){
+  el.onclick = function(e){
+    e.stopPropagation();
+    if(el.querySelector('input')) return;
+    const cur = getValue();
+    const inp = document.createElement('input');
+    inp.className = 'inline-inp';
+    inp.type = opts.type||'text';
+    inp.value = cur;
+    if(opts.style) inp.style.cssText = opts.style;
+    else inp.style.cssText='width:120px;font-size:inherit';
+    if(opts.placeholder) inp.placeholder=opts.placeholder;
+    const orig = el.innerHTML;
+    el.innerHTML='';
+    el.appendChild(inp);
+    inp.focus();inp.select();
+    function commit(){
+      const v=inp.value.trim();
+      const result=onSave(v);
+      el.innerHTML = result!==undefined ? result : orig;
+    }
+    inp.addEventListener('blur',commit);
+    inp.addEventListener('keydown',e=>{
+      if(e.key==='Enter'){e.preventDefault();inp.blur();}
+      if(e.key==='Escape'){el.innerHTML=orig;inp.removeEventListener('blur',commit);}
+    });
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  HEADER
+// ═══════════════════════════════════════════════════════════════
+function renderHeader(){
+  const now=new Date();
+  document.getElementById('currentMonth').textContent=
+    now.toLocaleString('en-US',{month:'long',year:'numeric'}).toUpperCase();
+  document.getElementById('subtitle').textContent=cfg.name+' · '+now.getFullYear();
+
+  const np=nextPay();
+  if(np){
+    const diff=Math.ceil((new Date(np.date)-new Date())/86400000);
+    document.getElementById('nextPayDetail').textContent=
+      `${np.type==='commission'?'Base + Commission':'Base Pay'} — `+
+      `${new Date(np.date).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'})} `+
+      `(${diff<=0?'Today!':diff+' day'+(diff!==1?'s':'')+' away'})`;
+  } else {
+    document.getElementById('nextPayDetail').textContent='No pay dates set — add them in Settings';
+  }
+
+  // Income chips — all editable
+  const row=document.getElementById('incomeRow');
+  row.innerHTML=`
+    <div class="chip" id="chip-base">
+      <span class="clabel">Base Pay</span>
+      <strong id="disp-base">${fmt(cfg.basePay)}</strong>
+      <span class="edit-hint">tap to edit</span>
+    </div>
+    <div class="chip" id="chip-comm">
+      <span class="clabel">Commission</span>
+      <strong id="disp-comm">${fmt(cfg.commission)}</strong>
+      <span class="edit-hint">tap to edit</span>
+    </div>
+    <div class="chip">
+      <span class="clabel">Total</span>
+      <strong id="disp-total">${fmt(TOTAL())}</strong>
+    </div>
+    <div class="chip" id="chip-next">
+      <span class="clabel">Next Pay</span>
+      <strong id="nextPayDisp">${np?fmtDate(np.date):'—'}</strong>
+    </div>`;
+
+  // Make base & commission editable
+  const chipBase=document.getElementById('chip-base');
+  const dispBase=document.getElementById('disp-base');
+  chipBase.onclick=()=>inlineEditNumber(dispBase,()=>cfg.basePay,v=>{cfg.basePay=v;svCfg();renderAll();});
+
+  const chipComm=document.getElementById('chip-comm');
+  const dispComm=document.getElementById('disp-comm');
+  chipComm.onclick=()=>inlineEditNumber(dispComm,()=>cfg.commission,v=>{cfg.commission=v;svCfg();renderAll();});
+}
+
+function inlineEditNumber(el, getVal, onSave){
+  if(el.querySelector('input')) return;
+  const cur=getVal();
+  const inp=document.createElement('input');
+  inp.type='number';inp.min='0';inp.step='1';
+  inp.className='inline-inp';
+  inp.value=cur;
+  inp.style.cssText='width:100px;font-size:0.88rem';
+  el.innerHTML='';el.appendChild(inp);
+  inp.focus();inp.select();
+  function commit(){
+    const v=parseFloat(inp.value);
+    if(!isNaN(v)&&v>=0) onSave(v);
+    else el.textContent=fmt(getVal());
+  }
+  inp.addEventListener('blur',commit);
+  inp.addEventListener('keydown',e=>{if(e.key==='Enter')inp.blur();});
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  OVERVIEW
+// ═══════════════════════════════════════════════════════════════
+function renderOverview(){
+  const total=TOTAL();
+  const billsPct=getBillsTotal()>0?Math.round(getBillsPaidAmt()/getBillsTotal()*100):0;
+  const playPct=cfg.playLimit>0?Math.min(Math.round(getPlaySpent()/cfg.playLimit*100),999):0;
+  const investTarget=Math.round(total*(cfg.investTarget/100));
+  const investPct=investTarget>0?Math.round(getTotalInvesting()/investTarget*100):0;
+  const totalSpent=getBillsTotal()+getPlaySpent()+getSavDepTotal()+getTotalInvesting();
+  const totalPct=total>0?Math.round(totalSpent/total*100):0;
+  const paidCnt=bills.filter(b=>billsPaid[b.id]).length;
+
+  const cards=[
+    {label:'Total Allocated',amount:fmt(totalSpent),sub:`of ${fmt(total)} income`,pct:totalPct,color:barColor(totalPct)},
+    {label:'Bills',amount:fmt(getBillsPaidAmt()),sub:`${paidCnt}/${bills.length} paid · ${fmt(getBillsTotal())} total`,pct:billsPct,color:'#e0a06a'},
+    {label:'Play Money',amount:fmt(getPlaySpent()),sub:`of ${fmt(cfg.playLimit)} limit`,pct:playPct,color:'#c8e06a'},
+    {label:'Savings',amount:fmt(getSavDepTotal()),sub:`deposited this month`,pct:0,color:'#6ae0b4'},
+    {label:'Investing',amount:fmt(getTotalInvesting()),sub:`${positions.length} position${positions.length!==1?'s':''}`,pct:investPct,color:'#a06ae0'},
+  ];
+  document.getElementById('overview').innerHTML=cards.map(c=>`
+    <div class="ov-card" style="--pct:${Math.min(c.pct,100)}%;--bar-color:${c.color}">
+      <div class="ov-label">${c.label}</div>
+      <div class="ov-amount">${c.amount}</div>
+      <div class="ov-sub">${c.sub}</div>
+      ${c.pct>0?`<div class="ov-pct ${sCls(c.pct)}">${c.pct}%</div>`:''}
+    </div>`).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  BILLS PANEL
+// ═══════════════════════════════════════════════════════════════
+function renderBills(){
+  const total=getBillsTotal();
+  const paidAmt=getBillsPaidAmt();
+  const paidCnt=bills.filter(b=>billsPaid[b.id]).length;
+  const pct=total>0?Math.round(paidAmt/total*100):0;
+
+  let html=`
+  <div class="summary-card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px">
+      <span style="font-size:0.72rem;color:var(--muted)">BILLS PAID</span>
+      <span class="${paidCnt===bills.length&&bills.length>0?'ok':'warn-c'}" style="font-size:0.72rem">${paidCnt} / ${bills.length}</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:7px">
+      <span style="font-size:1.4rem;font-weight:500">${fmt(paidAmt)}</span>
+      <span style="font-size:0.77rem;color:var(--muted)">of ${fmt(total)}</span>
+    </div>
+    <div class="prog-wrap"><div class="prog-bar" style="width:${pct}%;background:var(--good)"></div></div>
+    <div style="font-size:0.68rem;color:var(--muted)">${fmt(total-paidAmt)} remaining to pay</div>
+  </div>
+
+  <div class="card">
+    <div class="card-header" onclick="toggleCard('bill-body')">
+      <span class="card-title">Monthly Bills</span>
+      <span style="font-size:0.68rem;color:var(--muted)">tap to expand ▾</span>
+    </div>
+    <div class="card-body" id="bill-body" style="display:block;padding-top:8px">`;
+
+  if(!bills.length){
+    html+=`<div class="empty-note">No bills yet — add one below.</div>`;
+  } else {
+    bills.forEach(b=>{
+      const paid=!!billsPaid[b.id];
+      html+=`
+      <div class="bill-row ${paid?'paid':''}" id="billrow-${b.id}">
+        <div class="check-box ${paid?'on':''}" onclick="toggleBill('${b.id}')"></div>
+        <span class="bill-name" id="bname-${b.id}">${b.name}</span>
+        ${paid?`<span class="paid-tag">PAID</span>`:''}
+        <span class="bill-amt" id="bamt-${b.id}" title="tap to edit">${fmt(b.amount)}</span>
+        <button class="bill-del" onclick="deleteBill('${b.id}')" title="Remove">✕</button>
+      </div>`;
+    });
+  }
+
+  html+=`
+    <div class="section-label">Add Bill</div>
+    <div class="add-row">
+      <input class="inp" id="new-bill-name" placeholder="Bill name" />
+      <input class="inp" type="number" id="new-bill-amt" placeholder="Amount $" min="0" step="0.01" style="max-width:110px" />
+      <button class="btn" onclick="addBill()">+ Add</button>
+    </div>
+    </div>
+  </div>`;
+
+  document.getElementById('panel-bills').innerHTML=html;
+
+  // Wire up inline edits for bill names and amounts
+  bills.forEach(b=>{
+    const nameEl=document.getElementById(`bname-${b.id}`);
+    const amtEl=document.getElementById(`bamt-${b.id}`);
+    if(nameEl){
+      nameEl.classList.add('editable');
+      nameEl.onclick=e=>{
+        e.stopPropagation();
+        const inp=document.createElement('input');
+        inp.className='inline-inp inp';inp.type='text';inp.value=b.name;inp.style.width='120px';
+        nameEl.replaceWith(inp);inp.focus();inp.select();
+        function commit(){b.name=inp.value.trim()||b.name;svBills();renderBills();}
+        inp.addEventListener('blur',commit);
+        inp.addEventListener('keydown',e=>{if(e.key==='Enter')inp.blur();if(e.key==='Escape'){inp.removeEventListener('blur',commit);renderBills();}});
+      };
+    }
+    if(amtEl){
+      amtEl.onclick=e=>{
+        e.stopPropagation();
+        const inp=document.createElement('input');
+        inp.className='inline-inp inp';inp.type='number';inp.min='0';inp.step='0.01';inp.value=b.amount;inp.style.width='90px';
+        amtEl.replaceWith(inp);inp.focus();inp.select();
+        function commit(){const v=parseFloat(inp.value);if(!isNaN(v)&&v>=0)b.amount=v;svBills();renderBills();renderOverview();}
+        inp.addEventListener('blur',commit);
+        inp.addEventListener('keydown',e=>{if(e.key==='Enter')inp.blur();if(e.key==='Escape'){inp.removeEventListener('blur',commit);renderBills();}});
+      };
+    }
+  });
+}
+
+function toggleBill(id){
+  billsPaid[id]=!billsPaid[id];
+  svBillsPaid();
+  renderBills();renderOverview();
+}
+
+function addBill(){
+  const name=(document.getElementById('new-bill-name').value||'').trim();
+  const amount=parseFloat(document.getElementById('new-bill-amt').value);
+  if(!name||isNaN(amount)||amount<0) return alert('Please enter a name and valid amount.');
+  bills.push({id:uid(),name,amount});
+  svBills();renderBills();renderOverview();
+}
+
+function deleteBill(id){
+  if(!confirm('Remove this bill?')) return;
+  bills=bills.filter(b=>b.id!==id);
+  delete billsPaid[id];
+  svBills();svBillsPaid();renderBills();renderOverview();
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  PLAY MONEY PANEL
+// ═══════════════════════════════════════════════════════════════
+function renderPlay(){
+  const spent=getPlaySpent();
+  const limit=cfg.playLimit;
+  const pct=limit>0?Math.min(Math.round(spent/limit*100),100):0;
+  const rem=limit-spent;
+
+  let html=`
+  <div class="summary-card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px">
+      <span style="font-size:0.72rem;color:var(--muted)">PLAY MONEY SPENT</span>
+      <span class="${sCls(pct)}" style="font-size:0.72rem">${pct}%</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:7px">
+      <span style="font-size:1.4rem;font-weight:500">${fmt(spent)}</span>
+      <span style="font-size:0.77rem;color:var(--muted)">limit <span class="editable" id="play-limit-disp" title="tap to edit">${fmt(limit)}</span></span>
+    </div>
+    <div class="prog-wrap"><div class="prog-bar" style="width:${pct}%;background:${barColor(pct)}"></div></div>
+    <div style="font-size:0.68rem;margin-top:2px;color:${rem>=0?'var(--good)':'var(--danger)'}">
+      ${rem>=0?`${fmt(rem)} left to spend`:`${fmt(Math.abs(rem))} over budget`}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header" onclick="toggleCard('play-body')">
+      <span class="card-title">Logged Spending (${playLog.length})</span>
+      <span style="font-size:0.68rem;color:var(--muted)">▾</span>
+    </div>
+    <div class="card-body" id="play-body" style="display:block;padding-top:8px">`;
+
+  if(!playLog.length){
+    html+=`<div class="empty-note">Nothing logged yet. Go have fun!</div>`;
+  } else {
+    playLog.forEach((item,idx)=>{
+      html+=`
+      <div class="exp-row">
+        <span class="exp-name" id="pname-${idx}">${item.name}</span>
+        <span style="display:flex;align-items:center;gap:7px">
+          <span id="pamt-${idx}" class="editable">${fmt(item.amount)}</span>
+          <button class="btn sec sm" onclick="deletePlay(${idx})">✕</button>
+        </span>
+      </div>`;
+    });
+  }
+
+  html+=`
+      <div class="section-label">Add Expense</div>
+      <div class="add-row">
+        <input class="inp" id="play-name" placeholder="What'd you spend on?" />
+        <input class="inp" type="number" id="play-amt" placeholder="Amount $" min="0" step="0.01" style="max-width:110px" />
+        <button class="btn" onclick="addPlay()">+ Add</button>
+      </div>
+    </div>
+  </div>`;
+
+  document.getElementById('panel-play').innerHTML=html;
+
+  // Inline edits for play log
+  playLog.forEach((item,idx)=>{
+    const nameEl=document.getElementById(`pname-${idx}`);
+    const amtEl=document.getElementById(`pamt-${idx}`);
+    if(nameEl){
+      nameEl.onclick=e=>{
+        e.stopPropagation();
+        const inp=document.createElement('input');
+        inp.className='inline-inp inp';inp.type='text';inp.value=item.name;inp.style.width='140px';
+        nameEl.replaceWith(inp);inp.focus();inp.select();
+        function commit(){item.name=inp.value.trim()||item.name;svPlayLog();renderPlay();}
+        inp.addEventListener('blur',commit);
+        inp.addEventListener('keydown',e=>{if(e.key==='Enter')inp.blur();if(e.key==='Escape'){inp.removeEventListener('blur',commit);renderPlay();}});
+      };
+    }
+    if(amtEl){
+      amtEl.onclick=e=>{
+        e.stopPropagation();
+        const inp=document.createElement('input');
+        inp.className='inline-inp inp';inp.type='number';inp.min='0';inp.step='0.01';inp.value=item.amount;inp.style.width='90px';
+        amtEl.replaceWith(inp);inp.focus();inp.select();
+        function commit(){const v=parseFloat(inp.value);if(!isNaN(v)&&v>=0){item.amount=v;svPlayLog();}renderPlay();renderOverview();}
+        inp.addEventListener('blur',commit);
+        inp.addEventListener('keydown',e=>{if(e.key==='Enter')inp.blur();if(e.key==='Escape'){inp.removeEventListener('blur',commit);renderPlay();}});
+      };
+    }
+  });
+
+  // Inline edit for play limit
+  const limDisp=document.getElementById('play-limit-disp');
+  if(limDisp){
+    limDisp.onclick=e=>{
+      e.stopPropagation();
+      const inp=document.createElement('input');
+      inp.className='inline-inp inp';inp.type='number';inp.min='0';inp.step='1';inp.value=cfg.playLimit;inp.style.width='90px';
+      limDisp.replaceWith(inp);inp.focus();inp.select();
+      function commit(){const v=parseFloat(inp.value);if(!isNaN(v)&&v>=0){cfg.playLimit=v;svCfg();}renderPlay();renderOverview();}
+      inp.addEventListener('blur',commit);
+      inp.addEventListener('keydown',e=>{if(e.key==='Enter')inp.blur();});
+    };
+  }
+}
+
+function addPlay(){
+  const name=(document.getElementById('play-name').value||'').trim();
+  const amount=parseFloat(document.getElementById('play-amt').value);
+  if(!name||isNaN(amount)||amount<0) return alert('Please enter a description and valid amount.');
+  playLog.push({name,amount});
+  svPlayLog();renderPlay();renderOverview();
+}
+
+function deletePlay(idx){
+  playLog.splice(idx,1);
+  svPlayLog();renderPlay();renderOverview();
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  SAVINGS PANEL
+// ═══════════════════════════════════════════════════════════════
+function renderSavings(){
+  let html=``;
+
+  if(!savAccounts.length){
+    html+=`<div class="summary-card"><div class="empty-note">No savings accounts yet — add one below.</div></div>`;
+  }
+
+  savAccounts.forEach(s=>{
+    const bal=s.balance||0;
+    const goal=s.goal||0;
+    const deps=savDeposits[s.id]||[];
+    const totalDeps=deps.reduce((a,d)=>a+(d.amount||0),0);
+    const pct=goal>0?Math.min(Math.round(bal/goal*100),100):0;
+
+    html+=`
+    <div class="save-card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:9px">
+        <div>
+          <div class="save-title">
+            <span class="editable" id="sname-${s.id}">${s.name}</span>
+            ${s.apy?`<span style="color:var(--accent2);margin-left:6px">${s.apy}% APY</span>`:''}
+          </div>
+          <div style="display:flex;align-items:baseline;gap:6px;margin-top:4px">
+            <span class="save-bal" id="sbal-${s.id}" title="tap to edit">${fmt(bal)}</span>
+            <span style="font-size:0.6rem;color:var(--muted)">✎ balance</span>
+          </div>
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <div style="font-size:0.63rem;color:var(--muted)">Goal: <span class="editable" id="sgoal-${s.id}">${fmt(goal)}</span></div>
+          <div style="font-size:0.8rem;margin-top:3px" class="${sCls(pct)}">${pct}%</div>
+          <button class="btn ghost-red sm" style="margin-top:6px" onclick="deleteSavAccount('${s.id}')">Remove</button>
+        </div>
+      </div>
+      <div class="prog-wrap"><div class="prog-bar" style="width:${pct}%;background:var(--accent2)"></div></div>
+      <div style="display:flex;justify-content:space-between;font-size:0.67rem;color:var(--muted);margin-top:2px">
+        <span>${goal>0?fmt(Math.max(0,goal-bal))+' to goal':'No goal set'}</span>
+        <span>+${fmt(totalDeps)} this month</span>
+      </div>
+      <div class="section-label">Add Deposit</div>
+      <div class="add-row">
+        <input class="inp" id="dep-note-${s.id}" placeholder="Note (optional)" />
+        <input class="inp" type="number" id="dep-amt-${s.id}" placeholder="Amount $" min="0" step="0.01" style="max-width:110px" />
+        <button class="btn ghost" onclick="addDeposit('${s.id}')">+ Deposit</button>
+      </div>
+      ${deps.length?`
+      <div class="dep-list">
+        ${[...deps].reverse().map((d,ri)=>{
+          const realIdx=deps.length-1-ri;
+          return`<div class="dep-row">
+            <span>${d.note||'Deposit'} <span style="font-size:0.62rem;opacity:.6">${fmtDate(d.date)}</span></span>
+            <span style="display:flex;align-items:center;gap:7px">
+              <span style="color:var(--accent2)">+${fmt(d.amount)}</span>
+              <button class="btn sec sm" onclick="deleteDeposit('${s.id}',${realIdx})">✕</button>
+            </span>
+          </div>`;
+        }).join('')}
+      </div>`:''}
+    </div>`;
+  });
+
+  // Add new savings account
+  html+=`
+  <div class="card">
+    <div class="card-header" onclick="toggleCard('sav-add-body')">
+      <span class="card-title">+ Add Savings Account</span>
+      <span style="font-size:0.68rem;color:var(--muted)">▾</span>
+    </div>
+    <div class="card-body" id="sav-add-body" style="display:none;padding-top:10px">
+      <div class="add-row" style="flex-wrap:wrap">
+        <input class="inp" id="new-sav-name" placeholder="Account name" />
+        <input class="inp" type="number" id="new-sav-bal" placeholder="Current balance $" min="0" step="0.01" style="max-width:150px" />
+        <input class="inp" type="number" id="new-sav-goal" placeholder="Goal $" min="0" step="1" style="max-width:120px" />
+        <input class="inp" type="number" id="new-sav-apy" placeholder="APY % (optional)" min="0" step="0.01" style="max-width:140px" />
+        <button class="btn" onclick="addSavAccount()">+ Add Account</button>
+      </div>
+    </div>
+  </div>`;
+
+  document.getElementById('panel-savings').innerHTML=html;
+
+  // Wire inline edits
+  savAccounts.forEach(s=>{
+    // Name
+    const nameEl=document.getElementById(`sname-${s.id}`);
+    if(nameEl){
+      nameEl.onclick=e=>{
+        e.stopPropagation();
+        const inp=document.createElement('input');
+        inp.className='inline-inp inp';inp.type='text';inp.value=s.name;inp.style.width='150px';
+        nameEl.replaceWith(inp);inp.focus();inp.select();
+        function commit(){s.name=inp.value.trim()||s.name;svSavAccounts();renderSavings();}
+        inp.addEventListener('blur',commit);
+        inp.addEventListener('keydown',e=>{if(e.key==='Enter')inp.blur();if(e.key==='Escape'){inp.removeEventListener('blur',commit);renderSavings();}});
+      };
+    }
+    // Balance
+    const balEl=document.getElementById(`sbal-${s.id}`);
+    if(balEl){
+      balEl.onclick=e=>{
+        e.stopPropagation();
+        const inp=document.createElement('input');
+        inp.className='save-bal-input inline-inp';inp.type='number';inp.min='0';inp.step='0.01';inp.value=s.balance||0;inp.style.cssText='width:120px;font-size:1.3rem';
+        balEl.replaceWith(inp);inp.focus();inp.select();
+        function commit(){const v=parseFloat(inp.value);if(!isNaN(v)&&v>=0)s.balance=v;svSavAccounts();renderSavings();renderOverview();}
+        inp.addEventListener('blur',commit);
+        inp.addEventListener('keydown',e=>{if(e.key==='Enter')inp.blur();if(e.key==='Escape'){inp.removeEventListener('blur',commit);renderSavings();}});
+      };
+    }
+    // Goal
+    const goalEl=document.getElementById(`sgoal-${s.id}`);
+    if(goalEl){
+      goalEl.onclick=e=>{
+        e.stopPropagation();
+        const inp=document.createElement('input');
+        inp.className='inline-inp inp';inp.type='number';inp.min='0';inp.step='1';inp.value=s.goal||0;inp.style.width='100px';
+        goalEl.replaceWith(inp);inp.focus();inp.select();
+        function commit(){const v=parseFloat(inp.value);if(!isNaN(v)&&v>=0)s.goal=v;svSavAccounts();renderSavings();}
+        inp.addEventListener('blur',commit);
+        inp.addEventListener('keydown',e=>{if(e.key==='Enter')inp.blur();if(e.key==='Escape'){inp.removeEventListener('blur',commit);renderSavings();}});
+      };
+    }
+  });
+}
+
+function addSavAccount(){
+  const name=(document.getElementById('new-sav-name').value||'').trim();
+  const bal=parseFloat(document.getElementById('new-sav-bal').value)||0;
+  const goal=parseFloat(document.getElementById('new-sav-goal').value)||0;
+  const apy=parseFloat(document.getElementById('new-sav-apy').value)||null;
+  if(!name) return alert('Please enter an account name.');
+  savAccounts.push({id:uid(),name,balance:bal,goal,apy});
+  svSavAccounts();renderSavings();renderOverview();
+}
+
+function deleteSavAccount(id){
+  if(!confirm('Remove this savings account?')) return;
+  savAccounts=savAccounts.filter(s=>s.id!==id);
+  delete savDeposits[id];
+  svSavAccounts();svSavDeposits();renderSavings();renderOverview();
+}
+
+function addDeposit(id){
+  const noteEl=document.getElementById(`dep-note-${id}`);
+  const amtEl=document.getElementById(`dep-amt-${id}`);
+  const amount=parseFloat(amtEl.value);
+  if(isNaN(amount)||amount<=0) return alert('Please enter a valid deposit amount.');
+  const note=(noteEl.value||'').trim();
+  if(!savDeposits[id])savDeposits[id]=[];
+  savDeposits[id].push({amount,note,date:new Date().toISOString()});
+  const acc=savAccounts.find(s=>s.id===id);
+  if(acc)acc.balance=(acc.balance||0)+amount;
+  svSavDeposits();svSavAccounts();
+  noteEl.value='';amtEl.value='';
+  renderSavings();renderOverview();
+}
+
+function deleteDeposit(id,idx){
+  const dep=savDeposits[id][idx];
+  savDeposits[id].splice(idx,1);
+  const acc=savAccounts.find(s=>s.id===id);
+  if(acc)acc.balance=Math.max(0,(acc.balance||0)-(dep.amount||0));
+  svSavDeposits();svSavAccounts();
+  renderSavings();renderOverview();
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  INVESTING PANEL
+// ═══════════════════════════════════════════════════════════════
+function renderInvesting(){
+  const total=TOTAL();
+  const invested=getTotalInvesting();
+  const target=Math.round(total*(cfg.investTarget/100));
+  const pct=target>0?Math.round(invested/target*100):0;
+  const diff=invested-target;
+
+  let html=`
+  <div class="summary-card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px">
+      <span style="font-size:0.72rem;color:var(--muted)">MONTHLY INVESTING</span>
+      <span class="${sCls(pct)}" style="font-size:0.72rem">${pct}% of target</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:7px">
+      <span style="font-size:1.4rem;font-weight:500;color:var(--purple)">${fmt(invested)}</span>
+      <span style="font-size:0.77rem;color:var(--muted)">target: ${fmt(target)} (<span class="editable" id="inv-target-disp">${cfg.investTarget}</span>%)</span>
+    </div>
+    <div class="prog-wrap"><div class="prog-bar" style="width:${Math.min(pct,100)}%;background:var(--purple)"></div></div>
+    <div style="font-size:0.68rem;margin-top:2px;color:${diff===0?'var(--good)':diff>0?'var(--warn)':'var(--muted)'}">
+      ${diff===0?'Exactly on target':diff>0?`${fmt(diff)} over target`:diff<0?`${fmt(Math.abs(diff))} under target`:''}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header" onclick="toggleCard('inv-body')">
+      <span class="card-title">Positions (${positions.length})</span>
+      <span style="font-size:0.68rem;color:var(--muted)">▾</span>
+    </div>
+    <div class="card-body" id="inv-body" style="display:block;padding-top:8px">`;
+
+  if(!positions.length){
+    html+=`<div class="empty-note">No positions yet — add one below.</div>`;
+  } else {
+    positions.forEach((p,idx)=>{
+      const c=posCol(idx);
+      const pctOfTotal=invested>0?Math.round((p.monthlyAmount||0)/invested*100):0;
+      html+=`
+      <div class="pos-row" id="posrow-${p.id}">
+        <div style="display:flex;align-items:center;gap:9px">
+          <div style="width:10px;height:10px;border-radius:50%;background:${c};flex-shrink:0"></div>
+          <span class="pos-ticker" style="color:${c}" id="pticker-${p.id}">${p.ticker}</span>
+          <span style="flex:1"></span>
+          <span style="font-size:0.8rem;font-weight:500" id="pamt-${p.id}" class="editable">${fmt(p.monthlyAmount)}<span style="color:var(--muted);font-size:0.65rem">/mo</span></span>
+          <button class="btn sec sm" onclick="deletePosition('${p.id}')">✕</button>
+        </div>
+        <div class="pos-meta" style="padding-left:19px;margin-top:3px">
+          <span id="pbroker-${p.id}" class="editable" style="margin-right:8px">${p.broker||'—'}</span>
+          <span style="background:var(--surface2);border:1px solid var(--border);padding:1px 5px;border-radius:2px;margin-right:8px" id="ptype-${p.id}" class="editable">${p.type||'—'}</span>
+          ${p.notes?`<span id="pnotes-${p.id}" class="editable" style="font-style:italic">${p.notes}</span>`:`<span id="pnotes-${p.id}" class="editable" style="font-style:italic;opacity:.5">add notes</span>`}
+        </div>
+        <div style="padding-left:19px;margin-top:5px">
+          <div style="height:3px;background:var(--surface2);border-radius:2px;max-width:180px;overflow:hidden">
+            <div style="height:100%;width:${pctOfTotal}%;background:${c};border-radius:2px"></div>
+          </div>
+          <span style="font-size:0.62rem;color:var(--muted)">${pctOfTotal}% of portfolio</span>
+        </div>
+      </div>`;
+    });
+  }
+
+  html+=`
+      <div class="section-label">Add Position</div>
+      <div class="add-row" style="flex-wrap:wrap">
+        <input class="inp" id="new-ticker" placeholder="Ticker (VOO…)" style="max-width:100px;text-transform:uppercase" />
+        <input class="inp" id="new-broker" placeholder="Broker" style="max-width:110px" />
+        <input class="inp" id="new-type"   placeholder="Type (ETF…)" style="max-width:110px" />
+        <input class="inp" type="number" id="new-inv-amt" placeholder="$/mo" min="0" step="1" style="max-width:90px" />
+        <input class="inp" id="new-inv-notes" placeholder="Notes" />
+        <button class="btn" onclick="addPosition()">+ Add</button>
+      </div>
+    </div>
+  </div>`;
+
+  // Allocation bar
+  if(positions.length>1){
+    html+=`
+    <div class="summary-card" style="margin-top:10px">
+      <div style="font-size:0.63rem;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px">Portfolio Allocation</div>
+      <div class="alloc-bar">
+        ${positions.map((p,i)=>{
+          const w=invested>0?Math.round((p.monthlyAmount||0)/invested*100):0;
+          return`<div style="width:${w}%;background:${posCol(i)};min-width:${w>0?'4px':'0'}" title="${p.ticker}: ${w}%"></div>`;
+        }).join('')}
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:9px;margin-top:7px">
+        ${positions.map((p,i)=>{
+          const w=invested>0?Math.round((p.monthlyAmount||0)/invested*100):0;
+          return`<span style="font-size:0.67rem;color:var(--muted);display:flex;align-items:center;gap:4px">
+            <span style="width:8px;height:8px;border-radius:50%;background:${posCol(i)};display:inline-block"></span>
+            ${p.ticker} ${w}%
+          </span>`;
+        }).join('')}
+      </div>
+    </div>`;
+  }
+
+  document.getElementById('panel-investing').innerHTML=html;
+
+  // Inline edit: invest target %
+  const targetDisp=document.getElementById('inv-target-disp');
+  if(targetDisp){
+    targetDisp.onclick=e=>{
+      e.stopPropagation();
+      const inp=document.createElement('input');
+      inp.className='inline-inp inp';inp.type='number';inp.min='0';inp.max='100';inp.step='1';inp.value=cfg.investTarget;inp.style.width='55px';
+      targetDisp.replaceWith(inp);inp.focus();inp.select();
+      function commit(){const v=parseFloat(inp.value);if(!isNaN(v)&&v>=0&&v<=100){cfg.investTarget=v;svCfg();}renderInvesting();renderOverview();}
+      inp.addEventListener('blur',commit);
+      inp.addEventListener('keydown',e=>{if(e.key==='Enter')inp.blur();});
+    };
+  }
+
+  // Inline edits for each position
+  positions.forEach(p=>{
+    function wireInline(elId, field, type='text', transform=(v)=>v){
+      const el=document.getElementById(elId);
+      if(!el)return;
+      el.style.cursor='pointer';
+      el.onclick=e=>{
+        e.stopPropagation();
+        const inp=document.createElement('input');
+        inp.className='inline-inp inp';inp.type=type;inp.value=p[field]||'';inp.style.width='110px';
+        if(type==='number'){inp.min='0';inp.step='1';}
+        el.replaceWith(inp);inp.focus();inp.select();
+        function commit(){
+          const raw=inp.value.trim();
+          const v=type==='number'?parseFloat(raw):raw;
+          if(type==='number'){if(!isNaN(v)&&v>=0)p[field]=v;}
+          else{if(raw)p[field]=transform(raw);}
+          svPositions();renderInvesting();renderOverview();
+        }
+        inp.addEventListener('blur',commit);
+        inp.addEventListener('keydown',e=>{if(e.key==='Enter')inp.blur();if(e.key==='Escape'){inp.removeEventListener('blur',commit);renderInvesting();}});
+      };
+    }
+    wireInline(`pticker-${p.id}`,'ticker','text',v=>v.toUpperCase());
+    wireInline(`pbroker-${p.id}`,'broker');
+    wireInline(`ptype-${p.id}`,'type');
+    wireInline(`pnotes-${p.id}`,'notes');
+    wireInline(`pamt-${p.id}`,'monthlyAmount','number');
+  });
+}
+
+function addPosition(){
+  const ticker=(document.getElementById('new-ticker').value||'').trim().toUpperCase();
+  const broker=(document.getElementById('new-broker').value||'').trim();
+  const type=(document.getElementById('new-type').value||'').trim();
+  const amt=parseFloat(document.getElementById('new-inv-amt').value);
+  const notes=(document.getElementById('new-inv-notes').value||'').trim();
+  if(!ticker||isNaN(amt)||amt<0) return alert('Please enter a ticker and valid amount.');
+  positions.push({id:uid(),ticker,broker,type,monthlyAmount:amt,notes});
+  svPositions();renderInvesting();renderOverview();
+}
+
+function deletePosition(id){
+  if(!confirm('Remove this position?')) return;
+  positions=positions.filter(p=>p.id!==id);
+  svPositions();renderInvesting();renderOverview();
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  SETTINGS PANEL
+// ═══════════════════════════════════════════════════════════════
+function renderSettings(){
+  const pd=payDates.slice().sort((a,b)=>new Date(a.date)-new Date(b.date));
+  document.getElementById('panel-settings').innerHTML=`
+  <div class="summary-card">
+    <div class="section-label" style="margin-top:0">Budget Name</div>
+    <div class="add-row">
+      <input class="inp" id="cfg-name" value="${cfg.name}" placeholder="Budget name" />
+      <button class="btn" onclick="saveCfgName()">Save</button>
+    </div>
+
+    <div class="section-label">Income</div>
+    <div class="add-row">
+      <div style="flex:1;min-width:120px">
+        <div style="font-size:0.63rem;color:var(--muted);margin-bottom:4px">Base Pay ($/mo)</div>
+        <input class="inp" type="number" id="cfg-base" value="${cfg.basePay}" min="0" step="1" />
+      </div>
+      <div style="flex:1;min-width:120px">
+        <div style="font-size:0.63rem;color:var(--muted);margin-bottom:4px">Commission ($/mo)</div>
+        <input class="inp" type="number" id="cfg-comm" value="${cfg.commission}" min="0" step="1" />
+      </div>
+      <button class="btn" style="align-self:flex-end" onclick="saveCfgIncome()">Save</button>
+    </div>
+
+    <div class="section-label">Play Money Limit</div>
+    <div class="add-row">
+      <input class="inp" type="number" id="cfg-play" value="${cfg.playLimit}" min="0" step="1" style="max-width:160px" />
+      <button class="btn" onclick="saveCfgPlay()">Save</button>
+    </div>
+
+    <div class="section-label">Investing Target (%)</div>
+    <div class="add-row">
+      <input class="inp" type="number" id="cfg-invest" value="${cfg.investTarget}" min="0" max="100" step="1" style="max-width:100px" />
+      <button class="btn" onclick="saveCfgInvest()">Save</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header" onclick="toggleCard('pay-dates-body')">
+      <span class="card-title">Pay Dates (${pd.length})</span>
+      <span style="font-size:0.68rem;color:var(--muted)">▾</span>
+    </div>
+    <div class="card-body" id="pay-dates-body" style="display:block;padding-top:8px">
+      ${pd.length?pd.map((p,i)=>`
+        <div class="exp-row">
+          <span>${new Date(p.date).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'})}</span>
+          <span style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:0.68rem;background:var(--surface2);border:1px solid var(--border);padding:1px 6px;border-radius:2px;color:var(--muted)">${p.type}</span>
+            <button class="btn sec sm" onclick="deletePayDate(${i})">✕</button>
+          </span>
+        </div>`).join(''):'<div class="empty-note">No pay dates added yet.</div>'}
+      <div class="section-label">Add Pay Date</div>
+      <div class="add-row">
+        <input class="inp" type="date" id="new-pay-date" />
+        <select class="inp" id="new-pay-type" style="max-width:140px">
+          <option value="base">Base Pay</option>
+          <option value="commission">Commission</option>
+        </select>
+        <button class="btn" onclick="addPayDate()">+ Add</button>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap">
+    <button class="btn ghost-red" onclick="nukeAll()">🗑 Clear All Data</button>
+    <span style="font-size:0.67rem;color:var(--muted);align-self:center">Removes everything permanently</span>
+  </div>`;
+}
+
+function saveCfgName(){cfg.name=(document.getElementById('cfg-name').value||'').trim()||cfg.name;svCfg();renderHeader();}
+function saveCfgIncome(){
+  const b=parseFloat(document.getElementById('cfg-base').value);
+  const c=parseFloat(document.getElementById('cfg-comm').value);
+  if(!isNaN(b)&&b>=0)cfg.basePay=b;
+  if(!isNaN(c)&&c>=0)cfg.commission=c;
+  svCfg();renderHeader();renderOverview();renderInvesting();renderPlay();
+}
+function saveCfgPlay(){const v=parseFloat(document.getElementById('cfg-play').value);if(!isNaN(v)&&v>=0){cfg.playLimit=v;svCfg();}renderPlay();renderOverview();}
+function saveCfgInvest(){const v=parseFloat(document.getElementById('cfg-invest').value);if(!isNaN(v)&&v>=0&&v<=100){cfg.investTarget=v;svCfg();}renderInvesting();renderOverview();}
+
+function addPayDate(){
+  const date=document.getElementById('new-pay-date').value;
+  const type=document.getElementById('new-pay-type').value;
+  if(!date) return alert('Please select a date.');
+  if(payDates.find(p=>p.date===date&&p.type===type)) return alert('That date & type already exists.');
+  payDates.push({date,type});
+  svPayDates();renderSettings();renderHeader();
+}
+function deletePayDate(idx){payDates.splice(idx,1);svPayDates();renderSettings();renderHeader();}
+
+function nukeAll(){
+  if(!confirm('This will delete ALL your data permanently. Are you sure?')) return;
+  if(!confirm('Really? This cannot be undone.')) return;
+  localStorage.clear();
+  location.reload();
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  UTILS
+// ═══════════════════════════════════════════════════════════════
+function toggleCard(id){
+  const el=document.getElementById(id);
+  if(!el)return;
+  el.style.display=el.style.display==='none'?'block':'none';
+}
+
+function switchTab(tab,btn){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('panel-'+tab).classList.add('active');
+}
+
+function resetMonth(){
+  if(!confirm('Reset bills & spending for this month?\n(Savings balances and positions are kept.)')) return;
+  billsPaid={};playLog=[];savDeposits={};
+  svBillsPaid();svPlayLog();svSavDeposits();
+  renderAll();
+}
+
+document.addEventListener('keydown',e=>{
+  if(e.key!=='Enter')return;
+  const f=document.activeElement;
+  if(!f||!f.id)return;
+  if(f.id==='play-amt')addPlay();
+  else if(f.id==='new-bill-amt')addBill();
+  else if(f.id.startsWith('dep-amt-'))addDeposit(f.id.replace('dep-amt-',''));
+  else if(f.id==='new-inv-amt')addPosition();
+});
+
+function renderAll(){
+  renderHeader();
+  renderOverview();
+  renderBills();
+  renderPlay();
+  renderSavings();
+  renderInvesting();
+  renderSettings();
+}
+
+renderAll();
+</script>
+
+</body>
+</html>
